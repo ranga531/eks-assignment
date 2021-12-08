@@ -1,0 +1,55 @@
+  ---
+  apiVersion: appmesh.k8s.aws/v1beta2
+  kind: VirtualService
+  metadata:
+    name: nginx
+    namespace: default
+  spec:
+    awsName: nginx.default.svc.cluster.local
+    provider:
+      virtualRouter:
+        virtualRouterRef:
+          name: nginx-router
+  ---
+  apiVersion: appmesh.k8s.aws/v1beta2
+  kind: VirtualRouter
+  metadata:
+    name: nginx-router
+    namespace: default
+  spec:
+    listeners:
+      - portMapping:
+          port: 3000
+          protocol: http
+    routes:
+      - name: nginx-route
+        httpRoute:
+          match:
+            prefix: /
+          action:
+            weightedTargets:
+              - virtualNodeRef:
+                  name: nginx-v1
+                weight: 100
+  ---
+  apiVersion: appmesh.k8s.aws/v1beta2
+  kind: VirtualNode
+  metadata:
+    name: nginx-v1
+    namespace: default
+  spec:
+    podSelector:
+      matchLabels:
+        app: nginx
+    listeners:
+      - portMapping:
+          port: 80
+          protocol: http
+    serviceDiscovery:
+      dns:
+        hostname: nginx.default.svc.cluster.local
+    logging:
+      accessLog:
+        file:
+          path: /dev/stdout
+
